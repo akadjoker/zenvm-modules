@@ -16,3 +16,8 @@ triangle.zen
 bunnymark.zen
 mini_engine.zen
 mini_engine_intern.zen
+
+# Reason: needs plugins/hello built as a loadable shared library first
+# (dlopen'd at runtime by `import hello;`), which the snapshot suite here
+# doesn't do — build it manually and run this one by hand to check it.
+test_plugin.zen

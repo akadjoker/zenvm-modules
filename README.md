@@ -6,7 +6,11 @@ plain `zen` CLI — is the **zenvm** repository, consumed here as a git
 submodule at `vendor/zenvm`. Everything in this repo links against its
 `zen_static` target.
 
-Extracted from `akadjoker/zenvm@541c023`; history before that lives there.
+Extracted from `akadjoker/zenvm@541c023` (native modules, runners, graphics
+demos) and `akadjoker/zenvm@ec7b4ee` (docs, examples/scripts, bench, tools,
+the `plugins/hello` embedding demo — everything the core repo trimmed down
+to just `libzen`/`cli`/`vendor`/`tests`). History before those commits
+lives in zenvm.
 
 ## Layout
 
@@ -17,10 +21,14 @@ Extracted from `akadjoker/zenvm@541c023`; history before that lives there.
 | `runner/` | `zen_game`: zen + raylib, process loop |
 | `runner_gl/` | `zen_gl`: zen + glfw + opengl + stb_* + audio + sdl2 + canvas_gl |
 | `test_visual*/`, `test_gfx/`, `test_render/` | raylib-based benchmarks and the graphics-engine prototype |
-| `examples/gl`, `examples/flixel` | Scripts that need the graphics modules |
+| `examples/`, `scripts/` | Language demos (chip8, pascal, physics2d, tutorials) and scripts needing the graphics modules (`gl`, `flixel`) |
 | `assets/` | Images and sounds used by the demos |
+| `bench/` | Algorithm benchmarks, incl. vs. Lua/Wren |
+| `tools/` | The Python editor prototype |
+| `plugins/hello` | Minimal `zen_plugin.h` embedding demo — a loadable shared library (`dlopen`'d at runtime by `import hello;` in `tests/test_plugin.zen`); build it by hand, it isn't wired into the CMake build |
+| `help/`, `std/` | CLI help text and `std/functional.zen` |
 | `tests/` | Module snapshot tests (`run_zen_tests.sh bin/zen`) |
-| `docs/modules.md` | Script-facing API of each module |
+| `docs/` | Language guide, syntax reference, tutorials, and `modules.md` (script-facing API of each module) |
 | `cmake/SystemRaylib.cmake` | Finds a system raylib for the raylib-based targets |
 
 ## Build
