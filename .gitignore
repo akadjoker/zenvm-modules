@@ -1,0 +1,18 @@
+# Build directories are named per experiment (build, build-rel, build-asan,
+# build_pgo, ...); match them by pattern.
+/build/
+/build-*/
+/build_*/
+
+# Everything that lands in bin/ is a build product (zen, zen_game, zen_gl,
+# test_visual*, ...).
+/bin/
+
+# Build artifacts
+*.o
+*.a
+*.so
+compile_commands.json
+
+# Third-party ROM/asset packs users bring themselves
+examples/chip8/roms/

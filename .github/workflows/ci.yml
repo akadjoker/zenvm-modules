@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Headless CI: the batteries-included zen with the portable modules
+# (stb_*, dnn, sqlite, gif, canvas). Graphics/audio modules (glfw, sdl2,
+# raylib, opengl, miniaudio) and the runners need system libs and a display,
+# so they stay off here and are exercised locally.
+env:
+  ZEN_CI_CMAKE_FLAGS: >-
+    -DZEN_ENABLE_GLFW=OFF
+    -DZEN_ENABLE_SDL2=OFF
+    -DZEN_ENABLE_RAYLIB_MODULE=OFF
+    -DZEN_ENABLE_GL_MODULE=OFF
+    -DZEN_ENABLE_AUDIO=OFF
+    -DZEN_BUILD_VISUAL=OFF
+    -DZEN_BUILD_GFX=OFF
+
+jobs:
+  linux:
+    name: Linux (gcc, Release)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release $ZEN_CI_CMAKE_FLAGS
+
+      - name: Build
+        run: cmake --build build --target zen -j"$(nproc)"
+
+      - name: Module snapshot tests
+        run: ZEN_TEST_VERBOSE=1 tests/run_zen_tests.sh bin/zen

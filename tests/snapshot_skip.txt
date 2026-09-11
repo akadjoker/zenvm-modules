@@ -1,0 +1,18 @@
+# Tests skipped by tests/run_zen_tests.sh (snapshot suite).
+# One basename (with .zen) per line. Lines starting with '#' are comments.
+#
+# The headless module tests (test_sqlite, test_nn, test_gif) are NOT listed:
+# they run against the batteries-included bin/zen built here.
+
+# Reason: open a window — need a display and the glfw/gl/raylib modules.
+# Run manually with the matching runner.
+test_raylib_texture.zen
+test_raylib_types.zen
+test_raylib_window.zen
+test_zen_gl.zen
+triangle.zen
+
+# Reason: need the zen_game process-runner loop, not the plain CLI.
+bunnymark.zen
+mini_engine.zen
+mini_engine_intern.zen

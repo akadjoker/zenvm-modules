@@ -1,0 +1,171 @@
+cmake_minimum_required(VERSION 3.10)
+project(zenvm_modules LANGUAGES CXX)
+if(POLICY CMP0072)
+    cmake_policy(SET CMP0072 NEW)
+endif()
+
+# zenvm-modules: the native modules, runners and graphics demos for the Zen
+# language. The core VM (libzen + plain `zen` CLI) is the zenvm repository,
+# pulled in here as a git submodule at vendor/zenvm — every module links
+# against its zen_static target. Extracted from akadjoker/zenvm@541c023.
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(SystemRaylib)
+
+# Common warnings
+add_compile_options(-Wall -Wextra -Wno-unused-parameter)
+
+# --- Build types ---
+# Default to Release (a bare `cmake -B build` picking Debug would turn on
+# ASan+UBSan below and hand benchmarks a sanitised -O0 binary).
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
+# Sanitizer flags for Debug builds
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-g -O0 -fno-omit-frame-pointer)
+    add_compile_options(-fsanitize=address,undefined)
+    add_link_options(-fsanitize=address,undefined)
+endif()
+
+# --- zenvm core (git submodule) ---
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/zenvm/CMakeLists.txt")
+    message(FATAL_ERROR
+        "vendor/zenvm is empty — the zenvm core is a git submodule:\n"
+        "    git submodule update --init --recursive")
+endif()
+# The plain CLI is built by cli/ here instead, from the same main.cpp, with
+# the modules registered — keep zenvm from defining a clashing `zen` target.
+set(ZEN_BUILD_CLI OFF CACHE BOOL "zen CLI is built by zenvm-modules/cli" FORCE)
+add_subdirectory(vendor/zenvm)
+
+# --- Optional modules ---
+option(ZEN_ENABLE_STB_IMAGE "Enable stb_image image module" ON)
+if(ZEN_ENABLE_STB_IMAGE)
+    add_subdirectory(modules/stb_image)
+endif()
+
+option(ZEN_ENABLE_STB_PERLIN "Enable stb_perlin noise module" ON)
+if(ZEN_ENABLE_STB_PERLIN)
+    add_subdirectory(modules/stb_perlin)
+endif()
+
+option(ZEN_ENABLE_STB_RECTPACK "Enable stb_rectpack module" ON)
+if(ZEN_ENABLE_STB_RECTPACK)
+    add_subdirectory(modules/stb_rectpack)
+endif()
+
+option(ZEN_ENABLE_STB_FONT "Enable stb_truetype font module" ON)
+if(ZEN_ENABLE_STB_FONT)
+    add_subdirectory(modules/stb_trutype)
+endif()
+
+option(ZEN_ENABLE_AUDIO "Enable miniaudio sound module" ON)
+if(ZEN_ENABLE_AUDIO)
+    add_subdirectory(modules/audio)
+endif()
+
+# --- Platform detection ---
+# GLFW nao suporta Android nem iOS nem Emscripten
+if(ANDROID OR IOS OR EMSCRIPTEN)
+    set(_ZEN_GLFW_DEFAULT OFF)
+else()
+    set(_ZEN_GLFW_DEFAULT ON)
+endif()
+
+# SDL2 suporta tudo (desktop + Android + iOS)
+# Em Emscripten usa-se SDL2 via emcc flags, nao o find_package normal
+if(EMSCRIPTEN)
+    set(_ZEN_SDL2_DEFAULT OFF)  # Emscripten precisa de tratamento especial
+else()
+    set(_ZEN_SDL2_DEFAULT ON)
+endif()
+
+option(ZEN_ENABLE_GLFW "Enable GLFW window module" ${_ZEN_GLFW_DEFAULT})
+if(ZEN_ENABLE_GLFW)
+    add_subdirectory(modules/glfw)
+endif()
+
+option(ZEN_ENABLE_SDL2 "Enable SDL2 window module" ${_ZEN_SDL2_DEFAULT})
+if(ZEN_ENABLE_SDL2)
+    add_subdirectory(modules/sdl2)
+endif()
+
+# Raylib module (used by zen_game runner)
+option(ZEN_ENABLE_RAYLIB_MODULE "Enable Raylib native module" ON)
+if(ZEN_ENABLE_RAYLIB_MODULE)
+    add_subdirectory(modules/raylib)
+endif()
+
+# OpenGL bindings (raw GL API) — gl, gl4, gll all in modules/opengl
+option(ZEN_ENABLE_GL_MODULE "Enable OpenGL bindings module" ON)
+if(ZEN_ENABLE_GL_MODULE)
+    add_subdirectory(modules/opengl)
+endif()
+
+# DNN module (nn functions + optional Network class via MiniDNN)
+option(ZEN_ENABLE_DNN_MODULE    "Enable DNN/nn module" ON)
+if(ZEN_ENABLE_DNN_MODULE)
+    add_subdirectory(modules/dnn)
+endif()
+
+option(ZEN_ENABLE_SQLITE_MODULE "Enable SQLite module" ON)
+if(ZEN_ENABLE_SQLITE_MODULE)
+    add_subdirectory(modules/sqlite)
+endif()
+
+option(ZEN_ENABLE_GIF_MODULE "Enable GIF recording module" ON)
+if(ZEN_ENABLE_GIF_MODULE)
+    add_subdirectory(modules/gif)
+endif()
+
+option(ZEN_ENABLE_CANVAS_MODULE "Enable canvas 2D draw module" ON)
+if(ZEN_ENABLE_CANVAS_MODULE)
+    add_subdirectory(modules/canvas)
+endif()
+
+# --- CLI (zen executable, batteries included) ---
+add_subdirectory(cli)
+
+# --- Game runner (zen_game — zen + raylib module) ---
+add_subdirectory(runner)
+
+# --- GL runner (zen_gl — zen + glfw + opengl + stb_image) ---
+add_subdirectory(runner_gl)
+
+# --- Visual benchmark (raylib, process system) ---
+option(ZEN_BUILD_VISUAL "Build visual benchmark (requires raylib)" ON)
+option(ZEN_BUILD_GFX "Build graphics engine prototype (requires raylib)" ON)
+if(ZEN_BUILD_VISUAL OR ZEN_BUILD_GFX)
+    zen_find_system_raylib(ZEN_SYSTEM_RAYLIB_FOUND)
+    if(NOT ZEN_SYSTEM_RAYLIB_FOUND)
+        message(WARNING "System raylib not found; disabling raylib demos. Install raylib or set ZEN_BUILD_VISUAL=OFF/ZEN_BUILD_GFX=OFF.")
+        set(ZEN_BUILD_VISUAL OFF)
+        set(ZEN_BUILD_GFX OFF)
+    endif()
+endif()
+
+if(ZEN_BUILD_VISUAL)
+    add_subdirectory(test_visual)
+    add_subdirectory(test_visual_loop)
+    add_subdirectory(test_visual_intern)
+    add_subdirectory(test_visual_engine)
+endif()
+if(ZEN_BUILD_GFX)
+    add_subdirectory(test_gfx)
+endif()
+
+# --- Snapshot tests for the module scripts in tests/*.zen (ctest) ---
+# Headless ones (sqlite, nn, gif) run against the batteries-included zen;
+# tests/snapshot_skip.txt lists the ones that need a window or a runner.
+enable_testing()
+add_test(
+    NAME zenvm_modules_snapshot_suite
+    COMMAND bash "${CMAKE_SOURCE_DIR}/tests/run_zen_tests.sh" "$<TARGET_FILE:zen>"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+set_tests_properties(zenvm_modules_snapshot_suite PROPERTIES TIMEOUT 600 LABELS "snapshot")
